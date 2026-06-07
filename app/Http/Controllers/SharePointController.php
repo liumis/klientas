@@ -8,14 +8,20 @@ use App\Support\SharePointFileUrl;
 use DateTime;
 use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class SharePointController extends Controller
 {
     private const DEFAULT_EXCEL_SHEET_NAME = 'Automatizacija Klientas';
 
+    private const EXCEL_COLUMN_COUNT = 15;
+
     private Client $client;
-    private string $accessToken;
+
+    private string|false $accessToken;
+
     private object $spSettings;
+
     public function __construct()
     {
         $this->spSettings = (object) Setting::query()
@@ -26,12 +32,21 @@ class SharePointController extends Controller
             'base_uri' => 'https://graph.microsoft.com/v1.0/',
         ]);
     }
-    private function getSharePointToken(){
+
+    private function getSharePointToken(): string|false
+    {
         try {
-            $tenantId = $this->spSettings->tenant_id;
-            $clientId = $this->spSettings->client_id;
-            $clientSecret = $this->spSettings->client_secret;
-            $client = new Client();
+            $tenantId = $this->spSettings->tenant_id ?? null;
+            $clientId = $this->spSettings->client_id ?? null;
+            $clientSecret = $this->spSettings->client_secret ?? null;
+
+            if (! $tenantId || ! $clientId || ! $clientSecret) {
+                Log::error('SharePointController: missing tenant_id, client_id, or client_secret in settings');
+
+                return false;
+            }
+
+            $client = new Client;
             $response = $client->post(
                 "https://login.microsoftonline.com/$tenantId/oauth2/v2.0/token",
                 [
@@ -40,25 +55,36 @@ class SharePointController extends Controller
                         'client_secret' => $clientSecret,
                         'scope' => 'https://graph.microsoft.com/.default',
                         'grant_type' => 'client_credentials',
-                    ]
+                    ],
                 ]
             );
             $data = json_decode($response->getBody(), true);
-            return $data['access_token'];
 
-        } catch (\Exception $e) {
-            Log::error('SharePointController: ' . $e->getMessage());
+            return $data['access_token'] ?? false;
+
+        } catch (Throwable $e) {
+            Log::error('SharePointController: '.$e->getMessage());
+
+            return false;
+        }
+    }
+
+    private function getSiteId(string $sharepointSiteUrl): string|false
+    {
+        if (! $this->accessToken) {
             return false;
         }
 
-    }
-    private function getSiteId(string $sharepointSiteUrl): string
-    {
-        if(!$this->accessToken) return false;
         $parsed = parse_url($sharepointSiteUrl);
 
-        $host = $parsed['host'];
-        $path = $parsed['path'];
+        $host = $parsed['host'] ?? null;
+        $path = $parsed['path'] ?? null;
+
+        if (! $host || ! $path) {
+            Log::error('SharePointController: invalid site_name setting');
+
+            return false;
+        }
 
         $endpoint = "sites/{$host}:{$path}";
 
@@ -66,13 +92,14 @@ class SharePointController extends Controller
             'headers' => [
                 'Authorization' => "Bearer {$this->accessToken}",
                 'Accept' => 'application/json',
-            ]
+            ],
         ]);
 
         $data = json_decode($response->getBody(), true);
 
-        return $data['id'];
+        return $data['id'] ?? false;
     }
+
     public function getExcelWebUrl(): ?string
     {
         if (! $this->accessToken) {
@@ -113,9 +140,9 @@ class SharePointController extends Controller
         return null;
     }
 
-    private function getDriveItem(string $siteId, string $filePath): array|false
+    private function getDriveItem(string|false $siteId, string $filePath): array|false
     {
-        if (! $this->accessToken) {
+        if (! $this->accessToken || ! $siteId) {
             return false;
         }
 
@@ -142,14 +169,14 @@ class SharePointController extends Controller
 
             return json_decode($response->getBody(), true);
 
-        } catch (\Exception $e) {
+        } catch (Throwable $e) {
             Log::error('SharePointController: '.$e->getMessage());
         }
 
         return false;
     }
 
-    private function getFileId(string $siteId, string $filePath): string|false
+    private function getFileId(string|false $siteId, string $filePath): string|false
     {
         $item = $this->getDriveItem($siteId, $filePath);
 
@@ -159,82 +186,225 @@ class SharePointController extends Controller
 
         return $item['id'] ?? false;
     }
-    private function appendRowToExcel(string $siteId, string $fileId, string $sheetName, array $rowData)
-    {
-        if(!$this->accessToken) return false;
-        $encodedSheetName = rawurlencode($sheetName);
-        $usedRangeEndpoint = "sites/{$siteId}/drive/items/{$fileId}/workbook/worksheets/{$encodedSheetName}/usedRange";
 
+    /**
+     * @return array<int, string|int>
+     */
+    public function buildClaimRow(Claim $claim): array
+    {
+        $days = '';
+        if ($claim->rental_start && $claim->rental_end) {
+            $date1 = new DateTime($claim->rental_start->format('Y-m-d'));
+            $date2 = new DateTime($claim->rental_end->format('Y-m-d'));
+            $days = $date1->diff($date2)->days + 1;
+        }
+
+        return [
+            $claim->created_at?->format('Y-m-d') ?? '',           // A: Rezervacijos data
+            $claim->repair_vehicle_plates,                        // B: Valst. nr.
+            trim($claim->first_name.' '.$claim->last_name),       // C: Klientas
+            $claim->phone,                                        // D: Kontaktinis telefono numeris
+            $claim->email,                                        // E: El. Pašto adresas
+            $claim->rental_start?->format('Y-m-d') ?? '',         // F: Nuo
+            $claim->rental_end?->format('Y-m-d') ?? '',           // G: Iki
+            $days,                                                // H: Dienų skaičius
+            '',                                                   // I: Ar paimti dokumentai iš AutoPC
+            '',                                                   // J: Sąskaita
+            '',                                                   // K: Suma
+            '',                                                   // L: Išsiųsta draudimui
+            '',                                                   // M: Apmokėta
+            '',                                                   // N: Gautas mokėjimas
+            '',                                                   // O: Likutis
+        ];
+    }
+
+    private function createWorkbookSession(string $siteId, string $fileId): ?string
+    {
         try {
-            $response = $this->client->get($usedRangeEndpoint, [
-                'headers' => [
-                    'Authorization' => "Bearer {$this->accessToken}",
-                    'Accept' => 'application/json',
+            $response = $this->client->post(
+                "sites/{$siteId}/drive/items/{$fileId}/workbook/createSession",
+                [
+                    'headers' => $this->authHeaders(),
+                    'json' => ['persistChanges' => true],
+                    'http_errors' => false,
                 ]
-            ]);
+            );
+
+            if ($response->getStatusCode() !== 201 && $response->getStatusCode() !== 200) {
+                Log::error('SharePointController: createSession failed', [
+                    'status' => $response->getStatusCode(),
+                    'body' => (string) $response->getBody(),
+                ]);
+
+                return null;
+            }
 
             $data = json_decode($response->getBody(), true);
-            $lastRowIndex = $data['address'] ? count($data['values']) : 0;
 
-        } catch (\Exception $e) {
-            $lastRowIndex = 0;
-        }
-        $nextRowNumber = $lastRowIndex + 1;
-        $lastColumnLetter = chr(64 + count($rowData));
-        $targetRange = "A{$nextRowNumber}:{$lastColumnLetter}{$nextRowNumber}";
-        $updateEndpoint = "sites/{$siteId}/drive/items/{$fileId}/workbook/worksheets/{$encodedSheetName}/range(address='{$targetRange}')";
-        try {
-            $response = $this->client->patch($updateEndpoint, [
-                'headers' => [
-                    'Authorization' => "Bearer {$this->accessToken}",
-                    'Accept' => 'application/json',
-                    'Content-Type' => 'application/json',
-                ],
-                'json' => [
-                    'values' => [$rowData]
-                ]
-            ]);
-        } catch (\Exception $e) {
-            $error = "Nepavyko įrašyti duomenų į Excel rėžį {$targetRange}: " . $e->getMessage();
-            Log::error('SharePointController: ' . $error);
+            return $data['id'] ?? null;
+        } catch (Throwable $e) {
+            Log::error('SharePointController: createSession '.$e->getMessage());
+
+            return null;
         }
     }
-    public function run(int $id)
+
+    private function closeWorkbookSession(string $siteId, string $fileId, string $sessionId): void
     {
-        try{
-            $siteName = $this->spSettings->site_name;
-            $siteId = $this->getSiteId($siteName);
-            $filePath = $this->spSettings->file_path;
-            $fileName = $this->spSettings->file_name;
-            $fileId = $this->getFileId($siteId,$filePath.'/'.$fileName);
-            $sheet = $this->spSettings->sheet_name
-                ?? config('services.sharepoint.sheet_name', self::DEFAULT_EXCEL_SHEET_NAME);
-            $claim = Claim::findOrFail($id);
-            $days = "";
-            if($claim->rental_start and $claim->rental_end){
-                $date1 = new DateTime($claim->rental_start);
-                $date2 = new DateTime($claim->rental_end);
-                $days = $date1->diff($date2)->days+1;
-            }
-            $row = [
-                date_format($claim->created_at,"Y-m-d H:i"),
-                $claim->repair_vehicle_plates,
-                $claim->first_name." ".$claim->last_name,
-                $claim->rental_start?date_format($claim->rental_start,"Y-m-d"):"",
-                $claim->rental_end?date_format($claim->rental_end,"Y-m-d"):"",
-                $days,
-                $claim->id_or_passport_number,
-                $claim->id_or_passport_expires_at?date_format($claim->id_or_passport_expires_at,"Y-m-d"):"",
-                $claim->bank_card_number,
-                $claim->bank_card_expires_at?date_format($claim->bank_card_expires_at,"Y-m-d"):"",
-            ];
-        } catch (\Exception $e) {
-            Log::error('SharePointController: ' . $e->getMessage());
-        }
         try {
-            $this->appendRowToExcel($siteId, $fileId, $sheet, $row);
-        } catch (\Exception $e) {
-            Log::error('SharePointController: ' . $e->getMessage());
+            $this->client->post(
+                "sites/{$siteId}/drive/items/{$fileId}/workbook/closeSession",
+                [
+                    'headers' => $this->authHeaders($sessionId),
+                    'http_errors' => false,
+                ]
+            );
+        } catch (Throwable $e) {
+            Log::warning('SharePointController: closeSession '.$e->getMessage());
         }
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function authHeaders(?string $sessionId = null): array
+    {
+        $headers = [
+            'Authorization' => "Bearer {$this->accessToken}",
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+        ];
+
+        if ($sessionId) {
+            $headers['workbook-session-id'] = $sessionId;
+        }
+
+        return $headers;
+    }
+
+    private function columnLetter(int $columnIndex): string
+    {
+        $letter = '';
+        while ($columnIndex > 0) {
+            $columnIndex--;
+            $letter = chr(65 + ($columnIndex % 26)).$letter;
+            $columnIndex = intdiv($columnIndex, 26);
+        }
+
+        return $letter;
+    }
+
+    private function appendRowToExcel(string $siteId, string $fileId, string $sheetName, array $rowData): bool
+    {
+        if (! $this->accessToken) {
+            return false;
+        }
+
+        $sessionId = $this->createWorkbookSession($siteId, $fileId);
+
+        if ($sessionId === null) {
+            return false;
+        }
+
+        $encodedSheetName = rawurlencode($sheetName);
+        $headers = $this->authHeaders($sessionId);
+
+        try {
+            $usedRangeEndpoint = "sites/{$siteId}/drive/items/{$fileId}/workbook/worksheets/{$encodedSheetName}/usedRange";
+
+            $response = $this->client->get($usedRangeEndpoint, [
+                'headers' => $headers,
+                'http_errors' => false,
+            ]);
+
+            $lastRowNumber = 1;
+            if ($response->getStatusCode() === 200) {
+                $data = json_decode($response->getBody(), true);
+                $lastRowNumber = (int) ($data['rowCount'] ?? count($data['values'] ?? [[]]));
+            }
+
+            $nextRowNumber = max(2, $lastRowNumber + 1);
+            $lastColumnLetter = $this->columnLetter(count($rowData));
+            $targetRange = "A{$nextRowNumber}:{$lastColumnLetter}{$nextRowNumber}";
+            $updateEndpoint = "sites/{$siteId}/drive/items/{$fileId}/workbook/worksheets/{$encodedSheetName}/range(address='{$targetRange}')";
+
+            $response = $this->client->patch($updateEndpoint, [
+                'headers' => $headers,
+                'json' => ['values' => [$rowData]],
+                'http_errors' => false,
+            ]);
+
+            if ($response->getStatusCode() !== 200) {
+                Log::error('SharePointController: append row failed', [
+                    'range' => $targetRange,
+                    'sheet' => $sheetName,
+                    'status' => $response->getStatusCode(),
+                    'body' => (string) $response->getBody(),
+                ]);
+
+                return false;
+            }
+
+            Log::info('SharePointController: row appended', [
+                'sheet' => $sheetName,
+                'range' => $targetRange,
+            ]);
+
+            return true;
+        } catch (Throwable $e) {
+            Log::error('SharePointController: appendRowToExcel '.$e->getMessage());
+
+            return false;
+        } finally {
+            $this->closeWorkbookSession($siteId, $fileId, $sessionId);
+        }
+    }
+
+    public function run(int $id): bool
+    {
+        if (! $this->accessToken) {
+            Log::error('SharePointController: no access token — check SharePoint settings');
+
+            return false;
+        }
+
+        $siteName = $this->spSettings->site_name ?? null;
+        $filePath = $this->spSettings->file_path ?? null;
+        $fileName = $this->spSettings->file_name ?? null;
+
+        if (! $siteName || ! $filePath || ! $fileName) {
+            Log::error('SharePointController: missing site_name, file_path, or file_name in settings');
+
+            return false;
+        }
+
+        $siteId = $this->getSiteId($siteName);
+        $fileId = $this->getFileId($siteId, $filePath.'/'.$fileName);
+        $sheet = $this->spSettings->sheet_name
+            ?? config('services.sharepoint.sheet_name', self::DEFAULT_EXCEL_SHEET_NAME);
+
+        if (! $siteId || ! $fileId) {
+            Log::error('SharePointController: could not resolve SharePoint site or file', [
+                'site_name' => $siteName,
+                'file_path' => $filePath,
+                'file_name' => $fileName,
+            ]);
+
+            return false;
+        }
+
+        $claim = Claim::findOrFail($id);
+        $row = $this->buildClaimRow($claim);
+
+        if (count($row) !== self::EXCEL_COLUMN_COUNT) {
+            Log::error('SharePointController: row column count mismatch', [
+                'expected' => self::EXCEL_COLUMN_COUNT,
+                'actual' => count($row),
+            ]);
+
+            return false;
+        }
+
+        return $this->appendRowToExcel($siteId, $fileId, $sheet, $row);
     }
 }

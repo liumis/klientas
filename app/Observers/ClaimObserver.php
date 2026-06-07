@@ -21,7 +21,7 @@ class ClaimObserver
             $claim->wasChanged('status')
             && $claim->status === ClaimStatus::CONFIRMED
         ) {
-            ExportClaimToSharePoint::dispatch($claim);
+            ExportClaimToSharePoint::dispatchSync($claim);
         }
     }
 }

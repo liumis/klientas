@@ -10,7 +10,6 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Throwable;
 
 class ExportClaimToSharePoint implements ShouldQueue
 {
@@ -24,16 +23,12 @@ class ExportClaimToSharePoint implements ShouldQueue
 
     public function handle(): void
     {
-        try {
-            (new SharePointController)->run($this->claim->id);
-            Log::info('SharePoint export completed', ['claim_id' => $this->claim->id]);
-        } catch (Throwable $e) {
-            Log::error('SharePoint export failed', [
-                'claim_id' => $this->claim->id,
-                'message' => $e->getMessage(),
-            ]);
+        $success = (new SharePointController)->run($this->claim->id);
 
-            throw $e;
+        if (! $success) {
+            throw new \RuntimeException("SharePoint export failed for claim #{$this->claim->id}");
         }
+
+        Log::info('SharePoint export completed', ['claim_id' => $this->claim->id]);
     }
 }

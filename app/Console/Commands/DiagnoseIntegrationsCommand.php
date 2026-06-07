@@ -55,6 +55,7 @@ class DiagnoseIntegrationsCommand extends Command
             $this->line('SharePoint settings row: yes');
             $this->line('Site: '.($sharePointSettings->get('site_name') ?? '(empty)'));
             $this->line('File: '.($sharePointSettings->get('file_name') ?? '(empty)'));
+            $this->line('Sheet: '.($sharePointSettings->get('sheet_name') ?? 'Automatizacija Klientas (default)'));
         }
 
         $claimId = $this->argument('claim_id');
