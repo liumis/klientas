@@ -19,7 +19,7 @@ return new class extends Migration
             ['scope' => 'sharepoint', 'setting' => 'site_name', 'value' => 'https://greenlease.sharepoint.com:/sites/Saugykla'],
             ['scope' => 'sharepoint', 'setting' => 'file_path', 'value' => 'Lithuania/Replacement service/Pakaitiniai servisiniai'],
             ['scope' => 'sharepoint', 'setting' => 'file_name', 'value' => 'Klientu sarasas ir draudimo kontaktai VISI.xlsx'],
-            ['scope' => 'sharepoint', 'setting' => 'sheet_name', 'value' => 'Automatizacija'],
+            ['scope' => 'sharepoint', 'setting' => 'sheet_name', 'value' => 'Automatizacija Klientas'],
             ['scope' => 'sharepoint', 'setting' => 'file_guid', 'value' => '67B74654-CAB8-4F6D-A54B-642BBA3F8AED'],
         ];
 
