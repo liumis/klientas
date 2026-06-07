@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Http\Controllers\SharePointController;
 use App\Models\Claim;
+use App\Services\SharePointDiagnostics;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -22,9 +23,13 @@ class ClaimSharePointExporter
                     ->success()
                     ->send();
             } else {
+                $failureDetail = self::firstFailureDetail();
+
                 Notification::make()
                     ->title('Statusas atnaujintas')
-                    ->body('Nepavyko įrašyti į Excel — patikrinkite SharePoint nustatymus arba žurnalą.')
+                    ->body($failureDetail
+                        ? 'Nepavyko įrašyti į Excel: '.$failureDetail
+                        : 'Nepavyko įrašyti į Excel — paleiskite sharepoint:diagnose serveryje.')
                     ->warning()
                     ->send();
             }
@@ -44,5 +49,16 @@ class ClaimSharePointExporter
 
             return false;
         }
+    }
+
+    private static function firstFailureDetail(): ?string
+    {
+        foreach ((new SharePointDiagnostics)->run() as $step) {
+            if (! $step['ok']) {
+                return $step['step'].': '.$step['detail'];
+            }
+        }
+
+        return null;
     }
 }

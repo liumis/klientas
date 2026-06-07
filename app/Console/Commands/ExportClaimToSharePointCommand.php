@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Http\Controllers\SharePointController;
 use App\Models\Claim;
+use App\Services\SharePointDiagnostics;
 use Illuminate\Console\Command;
 
 class ExportClaimToSharePointCommand extends Command
@@ -34,7 +35,8 @@ class ExportClaimToSharePointCommand extends Command
             return self::SUCCESS;
         }
 
-        $this->error('SharePoint export failed — check storage/logs/laravel.log');
+        $this->error('SharePoint export failed.');
+        $this->line('Run: php artisan sharepoint:diagnose');
 
         return self::FAILURE;
     }
