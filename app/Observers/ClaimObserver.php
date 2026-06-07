@@ -15,8 +15,13 @@ class ClaimObserver
         }
     }
 
-    public function created(Claim $claim): void
+    public function updated(Claim $claim): void
     {
-        ExportClaimToSharePoint::dispatch($claim);
+        if (
+            $claim->wasChanged('status')
+            && $claim->status === ClaimStatus::CONFIRMED
+        ) {
+            ExportClaimToSharePoint::dispatch($claim);
+        }
     }
 }

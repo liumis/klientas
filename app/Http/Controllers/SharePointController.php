@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Log;
 
 class SharePointController extends Controller
 {
-    private const EXCEL_SHEET_NAME = 'Automatizacija Klientas';
+    private const DEFAULT_EXCEL_SHEET_NAME = 'Automatizacija Klientas';
 
     private Client $client;
     private string $accessToken;
@@ -207,7 +207,8 @@ class SharePointController extends Controller
             $filePath = $this->spSettings->file_path;
             $fileName = $this->spSettings->file_name;
             $fileId = $this->getFileId($siteId,$filePath.'/'.$fileName);
-            $sheet = self::EXCEL_SHEET_NAME;
+            $sheet = $this->spSettings->sheet_name
+                ?? config('services.sharepoint.sheet_name', self::DEFAULT_EXCEL_SHEET_NAME);
             $claim = Claim::findOrFail($id);
             $days = "";
             if($claim->rental_start and $claim->rental_end){

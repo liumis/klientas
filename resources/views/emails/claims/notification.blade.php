@@ -1,6 +1,6 @@
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="lt">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,7 +13,7 @@
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="640" style="width:100%;max-width:640px;background:#ffffff;border:1px solid #e6edf5;border-radius:12px;overflow:hidden;">
                 <tr>
                     <td style="background:#f8fbff;padding:24px;text-align:center;border-bottom:1px solid #e6edf5;">
-                        <img src="{{asset('images/sitandgo-logo.png')}}" alt="Sit&Go" style="display:block;margin:0 auto;max-width:100%;">
+                        <img src="{{ $logoUrl }}" alt="Sit&Go" width="180" style="display:block;margin:0 auto;max-width:180px;height:auto;">
                     </td>
                 </tr>
                 <tr>
@@ -30,15 +30,34 @@
                         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
                             <tr>
                                 <td style="padding:10px 12px;background:#f8fbff;border:1px solid #e6edf5;font-size:13px;color:#607d96;width:42%;">Pildantis asmuo</td>
-                                <td style="padding:10px 12px;border:1px solid #e6edf5;font-size:14px;color:#223a4e;">{{$claim->first_name}} {{$claim->last_name}}</td>
+                                <td style="padding:10px 12px;border:1px solid #e6edf5;font-size:14px;color:#223a4e;">{{ $claim->first_name }} {{ $claim->last_name }}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:10px 12px;background:#f8fbff;border:1px solid #e6edf5;font-size:13px;color:#607d96;width:42%;">Valstybinis numeris</td>
+                                <td style="padding:10px 12px;border:1px solid #e6edf5;font-size:14px;color:#223a4e;">{{ $claim->repair_vehicle_plates }}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:10px 12px;background:#f8fbff;border:1px solid #e6edf5;font-size:13px;color:#607d96;width:42%;">Data nuo</td>
+                                <td style="padding:10px 12px;border:1px solid #e6edf5;font-size:14px;color:#223a4e;">{{ $claim->rental_start?->format('Y-m-d') ?? '—' }}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:10px 12px;background:#f8fbff;border:1px solid #e6edf5;font-size:13px;color:#607d96;width:42%;">Data iki</td>
+                                <td style="padding:10px 12px;border:1px solid #e6edf5;font-size:14px;color:#223a4e;">{{ $claim->rental_end?->format('Y-m-d') ?? '—' }}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:10px 12px;background:#f8fbff;border:1px solid #e6edf5;font-size:13px;color:#607d96;width:42%;">Telefonas</td>
+                                <td style="padding:10px 12px;border:1px solid #e6edf5;font-size:14px;color:#223a4e;">{{ $claim->phone }}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:10px 12px;background:#f8fbff;border:1px solid #e6edf5;font-size:13px;color:#607d96;width:42%;">El. paštas</td>
+                                <td style="padding:10px 12px;border:1px solid #e6edf5;font-size:14px;color:#223a4e;">{{ $claim->email }}</td>
                             </tr>
                         </table>
                     </td>
                 </tr>
                 <tr>
                     <td style="padding:8px 28px 24px 28px;">
-
-                        <a style="display:inline-block;padding:12px 18px;background:#2ecc71;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:bold;" target="_blank" href="{{ \App\Filament\Resources\ClaimResource::getUrl('edit', ['record' => $claim->id]) }}">
+                        <a style="display:inline-block;padding:12px 18px;background:#2ecc71;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:bold;" target="_blank" href="{{ $claimEditUrl }}">
                             Peržiūrėti sistemoje
                         </a>
                     </td>

@@ -17,6 +17,14 @@ return [
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],
+
+    'email' => [
+        'logo_url' => env('EMAIL_LOGO_URL'),
+    ],
+
+    'sharepoint' => [
+        'sheet_name' => env('SHAREPOINT_SHEET_NAME'),
+    ],
     'resend' => [
         'key' => env('RESEND_API_KEY'),
     ],

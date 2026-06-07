@@ -25,6 +25,8 @@ class SubmitClaim extends Component implements HasForms
 
     public ?array $data = [];
 
+    public bool $submitted = false;
+
     public function mount(): void
     {
         $this->form->fill();
@@ -151,7 +153,7 @@ class SubmitClaim extends Component implements HasForms
 
         $claim = Claim::create($data);
 
-        session()->flash('message', 'Dėkojame, Jūsų duomenys sėkmingai gauti mūsų sistemoje. Pakaitinio automobilio atsiėmimo dieną su Jumis susisieksime ir informuosime apie tolesnius automobilio atsiėmimo veiksmus');
+        $this->submitted = true;
 
         $notificationRecipients = User::query()
             ->where('send_notifications', true)
@@ -166,8 +168,6 @@ class SubmitClaim extends Component implements HasForms
                 $notificationRecipients,
             );
         }
-
-        $this->form->fill();
     }
 
     public function render()

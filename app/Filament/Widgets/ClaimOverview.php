@@ -2,8 +2,8 @@
 
 namespace App\Filament\Widgets;
 
-use App\Models\Claim;
 use App\Enums\ClaimStatus;
+use App\Models\Claim;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
@@ -12,22 +12,17 @@ class ClaimOverview extends BaseWidget
     protected function getStats(): array
     {
         return [
-            Stat::make('Naujos užklausos', Claim::where('status', ClaimStatus::REQUEST)->count())
-                ->description('Laukia peržiūros')
-                ->descriptionIcon('heroicon-m-arrow-trending-up')
+            Stat::make('Užklausos', Claim::where('status', ClaimStatus::REQUEST)->count())
+                ->description('Laukia patvirtinimo')
                 ->color('gray'),
 
-            Stat::make('Aktyvi nuoma', Claim::where('status', ClaimStatus::RENT_ACTIVE)->count())
-                ->description('Vykdomi užsakymai')
-                ->color('primary'),
-
-            Stat::make('Laukia pasirašymo', Claim::whereIn('status', [ClaimStatus::READY, ClaimStatus::SETTLEMENT_SIGNED])->count())
-                ->description('Ruošiami dokumentai')
-                ->color('warning'),
-                
-            Stat::make('Iš viso užbaigta', Claim::where('status', ClaimStatus::COMPLETED)->count())
-                ->description('Sėkmingi sandoriai')
+            Stat::make('Patvirtinta', Claim::where('status', ClaimStatus::CONFIRMED)->count())
+                ->description('Įrašyta į Excel')
                 ->color('success'),
+
+            Stat::make('Atšaukta', Claim::where('status', ClaimStatus::CANCELLED)->count())
+                ->description('Atmestos užklausos')
+                ->color('danger'),
         ];
     }
 }
