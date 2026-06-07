@@ -6,6 +6,7 @@ use App\Filament\Resources\ClaimResource\Pages;
 use App\Enums\ClaimStatus;
 use App\Models\Claim;
 use App\Rules\ValidBankCardNumber;
+use App\Services\ClaimSharePointExporter;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Grid;
@@ -152,8 +153,16 @@ class ClaimResource extends Resource
                             ->options(ClaimStatus::class)
                             ->required(),
                     ])
-                    ->action(function ($record, array $data) {
-                        $record->update(['status' => $data['status']]);
+                    ->action(function (Claim $record, array $data): void {
+                        $status = $data['status'] instanceof ClaimStatus
+                            ? $data['status']
+                            : ClaimStatus::from($data['status']);
+
+                        $record->update(['status' => $status]);
+
+                        if ($status === ClaimStatus::CONFIRMED) {
+                            ClaimSharePointExporter::exportWithNotification($record->fresh());
+                        }
                     }),
             ])
             ->bulkActions([

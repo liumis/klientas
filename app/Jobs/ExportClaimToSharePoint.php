@@ -26,7 +26,9 @@ class ExportClaimToSharePoint implements ShouldQueue
         $success = (new SharePointController)->run($this->claim->id);
 
         if (! $success) {
-            throw new \RuntimeException("SharePoint export failed for claim #{$this->claim->id}");
+            Log::error('SharePoint export failed', ['claim_id' => $this->claim->id]);
+
+            return;
         }
 
         Log::info('SharePoint export completed', ['claim_id' => $this->claim->id]);

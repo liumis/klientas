@@ -88,16 +88,32 @@ class SharePointController extends Controller
 
         $endpoint = "sites/{$host}:{$path}";
 
-        $response = $this->client->get($endpoint, [
-            'headers' => [
-                'Authorization' => "Bearer {$this->accessToken}",
-                'Accept' => 'application/json',
-            ],
-        ]);
+        try {
+            $response = $this->client->get($endpoint, [
+                'headers' => [
+                    'Authorization' => "Bearer {$this->accessToken}",
+                    'Accept' => 'application/json',
+                ],
+                'http_errors' => false,
+            ]);
 
-        $data = json_decode($response->getBody(), true);
+            if ($response->getStatusCode() !== 200) {
+                Log::error('SharePointController: getSiteId failed', [
+                    'status' => $response->getStatusCode(),
+                    'body' => (string) $response->getBody(),
+                ]);
 
-        return $data['id'] ?? false;
+                return false;
+            }
+
+            $data = json_decode($response->getBody(), true);
+
+            return $data['id'] ?? false;
+        } catch (Throwable $e) {
+            Log::error('SharePointController: getSiteId '.$e->getMessage());
+
+            return false;
+        }
     }
 
     public function getExcelWebUrl(): ?string
@@ -362,49 +378,58 @@ class SharePointController extends Controller
 
     public function run(int $id): bool
     {
-        if (! $this->accessToken) {
-            Log::error('SharePointController: no access token — check SharePoint settings');
+        try {
+            if (! $this->accessToken) {
+                Log::error('SharePointController: no access token — check SharePoint settings');
 
-            return false;
-        }
+                return false;
+            }
 
-        $siteName = $this->spSettings->site_name ?? null;
-        $filePath = $this->spSettings->file_path ?? null;
-        $fileName = $this->spSettings->file_name ?? null;
+            $siteName = $this->spSettings->site_name ?? null;
+            $filePath = $this->spSettings->file_path ?? null;
+            $fileName = $this->spSettings->file_name ?? null;
 
-        if (! $siteName || ! $filePath || ! $fileName) {
-            Log::error('SharePointController: missing site_name, file_path, or file_name in settings');
+            if (! $siteName || ! $filePath || ! $fileName) {
+                Log::error('SharePointController: missing site_name, file_path, or file_name in settings');
 
-            return false;
-        }
+                return false;
+            }
 
-        $siteId = $this->getSiteId($siteName);
-        $fileId = $this->getFileId($siteId, $filePath.'/'.$fileName);
-        $sheet = $this->spSettings->sheet_name
-            ?? config('services.sharepoint.sheet_name', self::DEFAULT_EXCEL_SHEET_NAME);
+            $siteId = $this->getSiteId($siteName);
+            $fileId = $this->getFileId($siteId, $filePath.'/'.$fileName);
+            $sheet = $this->spSettings->sheet_name
+                ?? config('services.sharepoint.sheet_name', self::DEFAULT_EXCEL_SHEET_NAME);
 
-        if (! $siteId || ! $fileId) {
-            Log::error('SharePointController: could not resolve SharePoint site or file', [
-                'site_name' => $siteName,
-                'file_path' => $filePath,
-                'file_name' => $fileName,
+            if (! $siteId || ! $fileId) {
+                Log::error('SharePointController: could not resolve SharePoint site or file', [
+                    'site_name' => $siteName,
+                    'file_path' => $filePath,
+                    'file_name' => $fileName,
+                ]);
+
+                return false;
+            }
+
+            $claim = Claim::findOrFail($id);
+            $row = $this->buildClaimRow($claim);
+
+            if (count($row) !== self::EXCEL_COLUMN_COUNT) {
+                Log::error('SharePointController: row column count mismatch', [
+                    'expected' => self::EXCEL_COLUMN_COUNT,
+                    'actual' => count($row),
+                ]);
+
+                return false;
+            }
+
+            return $this->appendRowToExcel($siteId, $fileId, $sheet, $row);
+        } catch (Throwable $e) {
+            Log::error('SharePointController: run failed', [
+                'claim_id' => $id,
+                'message' => $e->getMessage(),
             ]);
 
             return false;
         }
-
-        $claim = Claim::findOrFail($id);
-        $row = $this->buildClaimRow($claim);
-
-        if (count($row) !== self::EXCEL_COLUMN_COUNT) {
-            Log::error('SharePointController: row column count mismatch', [
-                'expected' => self::EXCEL_COLUMN_COUNT,
-                'actual' => count($row),
-            ]);
-
-            return false;
-        }
-
-        return $this->appendRowToExcel($siteId, $fileId, $sheet, $row);
     }
 }
