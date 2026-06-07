@@ -33,14 +33,6 @@
                                 <td style="padding:10px 12px;border:1px solid #e6edf5;font-size:14px;color:#223a4e;">{{$claim->first_name}} {{$claim->last_name}}</td>
                             </tr>
                             <tr>
-                                <td style="padding:10px 12px;background:#f8fbff;border:1px solid #e6edf5;font-size:13px;color:#607d96;width:42%;">Servisas</td>
-                                <td style="padding:10px 12px;border:1px solid #e6edf5;font-size:14px;color:#223a4e;">{{$claim->garage->name}}</td>
-                            </tr>
-                            <tr>
-                                <td style="padding:10px 12px;background:#f8fbff;border:1px solid #e6edf5;font-size:13px;color:#607d96;width:42%;">Kaltininko draudimo bendrovė</td>
-                                <td style="padding:10px 12px;border:1px solid #e6edf5;font-size:14px;color:#223a4e;">{{$claim->partner->name}}</td>
-                            </tr>
-                            <tr>
                                 <td style="padding:10px 12px;background:#f8fbff;border:1px solid #e6edf5;font-size:13px;color:#607d96;width:42%;">Žalos numeris</td>
                                 <td style="padding:10px 12px;border:1px solid #e6edf5;font-size:14px;color:#223a4e;">{{$claim->claim_number}}</td>
                             </tr>

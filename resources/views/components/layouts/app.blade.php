@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Žalos registracija</title>
+        <title>Registracija</title>
         <link rel="icon" type="image/png" href="{{ asset('images/brand/favicon.png') }}">
 
         <style>[x-cloak] { display: none !important; }</style>

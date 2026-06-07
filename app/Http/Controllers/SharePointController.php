@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Log;
 
 class SharePointController extends Controller
 {
+    private const EXCEL_SHEET_NAME = 'Automatizacija Klientas';
+
     private Client $client;
     private string $accessToken;
     private object $spSettings;
@@ -160,7 +162,8 @@ class SharePointController extends Controller
     private function appendRowToExcel(string $siteId, string $fileId, string $sheetName, array $rowData)
     {
         if(!$this->accessToken) return false;
-        $usedRangeEndpoint = "sites/{$siteId}/drive/items/{$fileId}/workbook/worksheets/{$sheetName}/usedRange";
+        $encodedSheetName = rawurlencode($sheetName);
+        $usedRangeEndpoint = "sites/{$siteId}/drive/items/{$fileId}/workbook/worksheets/{$encodedSheetName}/usedRange";
 
         try {
             $response = $this->client->get($usedRangeEndpoint, [
@@ -179,7 +182,7 @@ class SharePointController extends Controller
         $nextRowNumber = $lastRowIndex + 1;
         $lastColumnLetter = chr(64 + count($rowData));
         $targetRange = "A{$nextRowNumber}:{$lastColumnLetter}{$nextRowNumber}";
-        $updateEndpoint = "sites/{$siteId}/drive/items/{$fileId}/workbook/worksheets/{$sheetName}/range(address='{$targetRange}')";
+        $updateEndpoint = "sites/{$siteId}/drive/items/{$fileId}/workbook/worksheets/{$encodedSheetName}/range(address='{$targetRange}')";
         try {
             $response = $this->client->patch($updateEndpoint, [
                 'headers' => [
@@ -204,8 +207,8 @@ class SharePointController extends Controller
             $filePath = $this->spSettings->file_path;
             $fileName = $this->spSettings->file_name;
             $fileId = $this->getFileId($siteId,$filePath.'/'.$fileName);
-            $sheet = $this->spSettings->sheet_name;
-            $claim = Claim::with(['partner', 'garage'])->findOrFail($id);
+            $sheet = self::EXCEL_SHEET_NAME;
+            $claim = Claim::findOrFail($id);
             $days = "";
             if($claim->rental_start and $claim->rental_end){
                 $date1 = new DateTime($claim->rental_start);
@@ -214,14 +217,16 @@ class SharePointController extends Controller
             }
             $row = [
                 date_format($claim->created_at,"Y-m-d H:i"),
-                $claim->garage->name,
-                " ",
+                $claim->repair_vehicle_plates,
                 $claim->first_name." ".$claim->last_name,
-                $claim->partner->short_name,
                 $claim->claim_number,
                 $claim->rental_start?date_format($claim->rental_start,"Y-m-d"):"",
                 $claim->rental_end?date_format($claim->rental_end,"Y-m-d"):"",
                 $days,
+                $claim->id_or_passport_number,
+                $claim->id_or_passport_expires_at?date_format($claim->id_or_passport_expires_at,"Y-m-d"):"",
+                $claim->bank_card_number,
+                $claim->bank_card_expires_at?date_format($claim->bank_card_expires_at,"Y-m-d"):"",
             ];
         } catch (\Exception $e) {
             Log::error('SharePointController: ' . $e->getMessage());

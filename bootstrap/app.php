@@ -13,11 +13,6 @@ $app = Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         //
     })
-    ->withMiddleware(function (Middleware $middleware) {
-        $middleware->validateCsrfTokens(except: [
-            'marksign/callback',
-        ]);
-    })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
     })

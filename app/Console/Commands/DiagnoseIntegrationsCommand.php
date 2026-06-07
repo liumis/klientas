@@ -2,21 +2,19 @@
 
 namespace App\Console\Commands;
 
-use App\Mail\DocumentSigningRequestMail;
 use App\Models\Claim;
 use App\Models\EmailSetting;
-use App\Services\MarkSignService;
+use App\Models\Setting;
 use App\Services\MicrosoftGraphMailService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Storage;
 
 class DiagnoseIntegrationsCommand extends Command
 {
-    protected $signature = 'integrations:diagnose {claim_id?} {--test-upload : Try a MarkSign PDF upload using an existing temp PDF} {--test-mail : Send signing email for the claim}';
+    protected $signature = 'integrations:diagnose {claim_id?}';
 
-    protected $description = 'Check queue, MarkSign token, email settings, and latest claim integration fields';
+    protected $description = 'Check queue, email settings, SharePoint settings, and latest claim';
 
     public function handle(): int
     {
@@ -35,38 +33,6 @@ class DiagnoseIntegrationsCommand extends Command
         }
 
         $this->newLine();
-        $this->info('=== MarkSign ===');
-        $token = config('services.marksign.token');
-        $this->line('MARKSIGN_TOKEN configured: '.(filled($token) ? 'yes ('.strlen((string) $token).' chars)' : 'NO'));
-        $this->line('APP_URL: '.config('app.url'));
-        $this->line('Callback route: '.route('marksign.callback'));
-
-        $markSign = app(MarkSignService::class);
-        $this->line('MarkSignService configured: '.($markSign->isConfigured() ? 'yes' : 'no'));
-
-        if ($this->option('test-upload') && $markSign->isConfigured()) {
-            $testPath = 'temp/diagnose_marksign_test.pdf';
-            if (! Storage::disk('local')->exists($testPath)) {
-                $claimId = $this->argument('claim_id') ?? Claim::query()->latest()->value('id');
-                $candidate = $claimId ? "temp/claim_{$claimId}.pdf" : null;
-                $testPath = ($candidate && Storage::disk('local')->exists($candidate))
-                    ? $candidate
-                    : $testPath;
-            }
-
-            if ($testPath === 'temp/diagnose_marksign_test.pdf' && ! Storage::disk('local')->exists($testPath)) {
-                $this->warn('No temp PDF found — submit/Pergeneruoti a claim first, then rerun with --test-upload');
-            } else {
-                try {
-                    $uuid = $markSign->uploadDocument($testPath);
-                    $this->info("MarkSign test upload OK: {$uuid}");
-                } catch (\Throwable $e) {
-                    $this->error('MarkSign test upload failed: '.$e->getMessage());
-                }
-            }
-        }
-
-        $this->newLine();
         $this->info('=== Email (O365 / Graph) ===');
         $email = EmailSetting::current();
         if ($email === null) {
@@ -78,9 +44,22 @@ class DiagnoseIntegrationsCommand extends Command
             $this->line('Mailbox (mail): '.($email->mail ?? '(empty)'));
         }
 
+        $this->newLine();
+        $this->info('=== SharePoint (Excel) ===');
+        $sharePointSettings = Setting::query()
+            ->where('scope', 'sharepoint')
+            ->pluck('value', 'setting');
+        if ($sharePointSettings->isEmpty()) {
+            $this->warn('No SharePoint settings row — Excel export will fail until configured.');
+        } else {
+            $this->line('SharePoint settings row: yes');
+            $this->line('Site: '.($sharePointSettings->get('site_name') ?? '(empty)'));
+            $this->line('File: '.($sharePointSettings->get('file_name') ?? '(empty)'));
+        }
+
         $claimId = $this->argument('claim_id');
         $claim = $claimId
-            ? Claim::with(['partner', 'garage'])->find($claimId)
+            ? Claim::find($claimId)
             : Claim::query()->latest()->first();
 
         if ($claim) {
@@ -88,38 +67,8 @@ class DiagnoseIntegrationsCommand extends Command
             $this->info("=== Claim #{$claim->id} ===");
             $this->line('Status: '.($claim->status?->value ?? '(null)'));
             $this->line('Email: '.$claim->email);
-            $this->line('marksign_uuid: '.($claim->marksign_uuid ?? '(empty)'));
-            $this->line('signing_url: '.($claim->signing_url ? 'set' : '(empty)'));
-
-            if ($claim->marksign_uuid && $markSign->isConfigured()) {
-                try {
-                    $status = $markSign->getDocumentStatus($claim->marksign_uuid);
-                    $signer = $status['signers'][0] ?? null;
-                    $this->line('MarkSign signer status: '.($signer['signStatus'] ?? json_encode($status)));
-                } catch (\Throwable $e) {
-                    $this->error('MarkSign status API: '.$e->getMessage());
-                }
-            }
-
-            if ($this->option('test-mail')) {
-                if (! filled($claim->signing_url)) {
-                    $this->warn('Claim has no signing_url — run Pergeneruoti first.');
-                } else {
-                    try {
-                        app(MicrosoftGraphMailService::class)->send(
-                            new DocumentSigningRequestMail($claim),
-                            $claim->email,
-                        );
-                        $this->info("Signing email sent to: {$claim->email}");
-                    } catch (\Throwable $e) {
-                        $this->error('Test mail failed: '.$e->getMessage());
-                    }
-                }
-            }
+            $this->line('Claim number: '.$claim->claim_number);
         }
-
-        $this->newLine();
-        $this->comment('Documents appear in the MarkSign account that owns MARKSIGN_TOKEN — not necessarily every login.');
 
         return self::SUCCESS;
     }

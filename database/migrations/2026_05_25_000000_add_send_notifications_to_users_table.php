@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (! Schema::hasTable('users') || Schema::hasColumn('users', 'send_notifications')) {
+            return;
+        }
+
         Schema::table('users', function (Blueprint $table) {
             $table->boolean('send_notifications')->default(false)->after('email');
         });
@@ -15,6 +19,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (! Schema::hasTable('users') || ! Schema::hasColumn('users', 'send_notifications')) {
+            return;
+        }
+
         Schema::table('users', function (Blueprint $table) {
             $table->dropColumn('send_notifications');
         });

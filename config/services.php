@@ -17,10 +17,6 @@ return [
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],
-    'marksign' => [
-        'token' => env('MARKSIGN_TOKEN'),
-        'base_url' => 'https://api.marksign.eu',
-    ],
     'resend' => [
         'key' => env('RESEND_API_KEY'),
     ],

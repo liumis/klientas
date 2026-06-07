@@ -4,7 +4,7 @@
             <img src="{{ asset('images/sitandgo-logo.png') }}" alt="Sit&Go Logo" class="h-10 w-auto">
         </div>
 
-        <h1 class="text-2xl font-semibold">Žalos registracija</h1>
+        <h1 class="text-2xl font-semibold">Registracija</h1>
         <p class="mt-2 text-sm text-gray-600">Užpildykite formą ir pateikite draudiminio įvykio informaciją.</p>
 
         <form wire:submit.prevent="create" class="mt-6">

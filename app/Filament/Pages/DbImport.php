@@ -132,7 +132,7 @@ class DbImport extends Page implements HasForms
     {
         $lines = ['Import completed. Row counts:'];
 
-        foreach (['users', 'partners', 'garages', 'claims', 'settings'] as $table) {
+        foreach (['users', 'claims', 'settings'] as $table) {
             if (! Schema::hasTable($table)) {
                 $lines[] = "- {$table}: missing";
 
