@@ -29,6 +29,13 @@ class SharePointDiagnostics
             ->where('scope', 'sharepoint')
             ->pluck('value', 'setting');
 
+        if (! filled($settings->get('client_secret'))) {
+            $envSecret = config('services.sharepoint.client_secret');
+            if (filled($envSecret)) {
+                $settings->put('client_secret', $envSecret);
+            }
+        }
+
         if ($settings->isEmpty()) {
             $this->add('SharePoint settings', false, 'No rows with scope=sharepoint. Run migrations or import settings.');
 

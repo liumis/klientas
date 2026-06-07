@@ -51,6 +51,7 @@
         ],
         "deploy": [
             "@php artisan migrate --force --no-interaction",
+            "@php artisan sharepoint:sync-secret --no-interaction || exit 0",
             "@php artisan filament:optimize"
         ],
         "post-autoload-dump": [

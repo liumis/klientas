@@ -22,6 +22,17 @@ class SharePointController extends Controller
 
     private object $spSettings;
 
+    private function sharepointSetting(string $key): ?string
+    {
+        $value = $this->spSettings->{$key} ?? null;
+
+        if ($key === 'client_secret' && ! filled($value)) {
+            $value = config('services.sharepoint.client_secret');
+        }
+
+        return filled($value) ? (string) $value : null;
+    }
+
     public function __construct()
     {
         $this->spSettings = (object) Setting::query()
@@ -36,9 +47,9 @@ class SharePointController extends Controller
     private function getSharePointToken(): string|false
     {
         try {
-            $tenantId = $this->spSettings->tenant_id ?? null;
-            $clientId = $this->spSettings->client_id ?? null;
-            $clientSecret = $this->spSettings->client_secret ?? null;
+            $tenantId = $this->sharepointSetting('tenant_id');
+            $clientId = $this->sharepointSetting('client_id');
+            $clientSecret = $this->sharepointSetting('client_secret');
 
             if (! $tenantId || ! $clientId || ! $clientSecret) {
                 Log::error('SharePointController: missing tenant_id, client_id, or client_secret in settings');

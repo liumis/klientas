@@ -24,6 +24,7 @@ return [
 
     'sharepoint' => [
         'sheet_name' => env('SHAREPOINT_SHEET_NAME'),
+        'client_secret' => env('SHAREPOINT_CLIENT_SECRET'),
     ],
     'resend' => [
         'key' => env('RESEND_API_KEY'),
