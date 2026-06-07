@@ -56,7 +56,6 @@ return new class extends Migration
                 $table->string('bank_card_number')->default('');
                 $table->date('bank_card_expires_at')->nullable();
 
-                $table->string('claim_number');
                 $table->string('address');
                 $table->string('phone');
                 $table->string('email');

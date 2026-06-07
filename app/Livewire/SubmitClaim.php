@@ -102,8 +102,6 @@ class SubmitClaim extends Component implements HasForms
                         TextInput::make('phone')->label('Telefonas')->tel()->required(),
                         TextInput::make('email')->label('El. paštas')->email()->required(),
 
-                        TextInput::make('claim_number')->label('Žalos numeris')->required()->columnSpanFull(),
-
                         Grid::make(2)
                             ->schema([
                                 DatePicker::make('rental_start')

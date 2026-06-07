@@ -67,7 +67,6 @@ class DiagnoseIntegrationsCommand extends Command
             $this->info("=== Claim #{$claim->id} ===");
             $this->line('Status: '.($claim->status?->value ?? '(null)'));
             $this->line('Email: '.$claim->email);
-            $this->line('Claim number: '.$claim->claim_number);
         }
 
         return self::SUCCESS;

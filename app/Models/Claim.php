@@ -13,7 +13,7 @@ class Claim extends Model
         'id_or_passport_number', 'id_or_passport_expires_at',
         'bank_card_number', 'bank_card_expires_at',
         'address',
-        'phone', 'email', 'claim_number', 'documents', 'rental_start',
+        'phone', 'email', 'documents', 'rental_start',
         'rental_end', 'status',
     ];
 

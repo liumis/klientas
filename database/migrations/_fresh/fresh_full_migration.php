@@ -23,7 +23,6 @@ return new class extends Migration
             $table->string('bank_card_number');
             $table->date('bank_card_expires_at');
 
-            $table->string('claim_number');
             $table->string('address');
             $table->string('phone');
             $table->string('email');

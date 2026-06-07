@@ -219,7 +219,6 @@ class SharePointController extends Controller
                 date_format($claim->created_at,"Y-m-d H:i"),
                 $claim->repair_vehicle_plates,
                 $claim->first_name." ".$claim->last_name,
-                $claim->claim_number,
                 $claim->rental_start?date_format($claim->rental_start,"Y-m-d"):"",
                 $claim->rental_end?date_format($claim->rental_end,"Y-m-d"):"",
                 $days,
