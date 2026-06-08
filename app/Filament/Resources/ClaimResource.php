@@ -50,7 +50,13 @@ class ClaimResource extends Resource
                         DatePicker::make('birth_date')->label('Gimimo data')->required(),
 
                         TextInput::make('license_number')->label('Vairuotojo pažymėjimo Nr.')->required(),
-                        DatePicker::make('license_expires_at')->label('Pažymėjimo galiojimas')->required(),
+                        DatePicker::make('license_expires_at')
+                            ->label('Pažymėjimo galiojimas')
+                            ->required()
+                            ->minDate(now()->addWeek()->startOfDay())
+                            ->validationMessages([
+                                'after_or_equal' => 'Pažymėjimo privalo galioti bent savaitę.',
+                            ]),
 
                         TextInput::make('id_or_passport_number')
                             ->label('ID arba paso numeris')
@@ -81,7 +87,7 @@ class ClaimResource extends Resource
                             ->required()
                             ->columnSpanFull(),
 
-                        TextInput::make('phone')->label('Telefonas')->tel()->required(),
+                        TextInput::make('phone')->label('Telefonas')->tel()->placeholder('+370')->required(),
                         TextInput::make('email')->label('El. paštas')->email()->required(),
 
                         Grid::make(2)
@@ -94,7 +100,10 @@ class ClaimResource extends Resource
 
                                 DatePicker::make('rental_end')
                                     ->label('Nuomos pabaiga')
-                                    ->after('rental_start'),
+                                    ->after('rental_start')
+                                    ->validationMessages([
+                                        'after' => 'Pabaigos data turi būti vėlesnė už pradžios datą.',
+                                    ]),
                             ]),
 
                         FileUpload::make('documents')

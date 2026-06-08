@@ -73,7 +73,13 @@ class SubmitClaim extends Component implements HasForms
                             ->validationMessages([
                                 'regex' => 'Vairuotojo pažymėjimo numerį gali sudaryti tik skaitmenys.',
                             ]),
-                        DatePicker::make('license_expires_at')->label('Pažymėjimo galiojimas')->required(),
+                        DatePicker::make('license_expires_at')
+                            ->label('Pažymėjimo galiojimas')
+                            ->required()
+                            ->minDate(now()->addWeek()->startOfDay())
+                            ->validationMessages([
+                                'after_or_equal' => 'Pažymėjimo privalo galioti bent savaitę.',
+                            ]),
 
                         TextInput::make('id_or_passport_number')
                             ->label('ID arba paso numeris')
@@ -101,7 +107,7 @@ class SubmitClaim extends Component implements HasForms
 
                         TextInput::make('address')->label('Gyvenamosios vietos adresas')->required()->columnSpanFull(),
 
-                        TextInput::make('phone')->label('Telefonas')->tel()->required(),
+                        TextInput::make('phone')->label('Telefonas')->tel()->placeholder('+370')->required(),
                         TextInput::make('email')->label('El. paštas')->email()->required(),
 
                         Grid::make(2)

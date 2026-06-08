@@ -13,7 +13,7 @@
                 </p>
             </div>
         @else
-            <p class="mt-2 text-sm text-gray-600">Užpildykite formą ir pateikite draudiminio įvykio informaciją.</p>
+            <p class="mt-2 text-sm text-gray-600">Prašome užpildyti formą ir pateikti duomenis, reikalingus pakaitinio automobilio nuomos sutarčiai parengti.</p>
 
             <form wire:submit.prevent="create" class="mt-6">
                 {{ $this->form }}

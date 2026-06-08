@@ -99,8 +99,8 @@ class DbImport extends Page implements HasForms
         if ($sql === null || trim($sql) === '') {
             Notification::make()
                 ->danger()
-                ->title('No SQL provided')
-                ->body('Paste SQL or upload a .sql file.')
+                ->title('SQL nepateiktas')
+                ->body('Įklijuokite SQL arba įkelkite .sql failą.')
                 ->send();
 
             return;
@@ -111,7 +111,7 @@ class DbImport extends Page implements HasForms
         } catch (Throwable $exception) {
             Notification::make()
                 ->danger()
-                ->title('Import failed')
+                ->title('Importas nepavyko')
                 ->body($exception->getMessage())
                 ->send();
 
@@ -123,14 +123,14 @@ class DbImport extends Page implements HasForms
 
         Notification::make()
             ->success()
-            ->title('Database imported')
+            ->title('Duomenų bazė importuota')
             ->body($this->buildReportMessage())
             ->send();
     }
 
     private function buildReportMessage(): string
     {
-        $lines = ['Import completed. Row counts:'];
+        $lines = ['Importas baigtas. Įrašų skaičius:'];
 
         foreach (['users', 'claims', 'settings'] as $table) {
             if (! Schema::hasTable($table)) {

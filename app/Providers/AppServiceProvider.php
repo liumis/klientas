@@ -26,6 +26,7 @@ class AppServiceProvider extends ServiceProvider
         Claim::observe(ClaimObserver::class);
 
         \Carbon\Carbon::setLocale('lt');
+        app()->setLocale('lt');
         if (app()->environment('production')) {
             URL::forceScheme('https');
         }
